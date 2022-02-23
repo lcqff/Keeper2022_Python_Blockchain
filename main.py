@@ -8,25 +8,22 @@ import requests
 app = Flask(__name__)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
 
-@app.route('/', methods = ['GET'])
-def main():
-    m = Mine()
-    b = Blockchain()
-    t = Transaction()
-    i = 0
-    #while True:
-    mined = mining(m)
-    chain = get_chain(b)
-    is_updated = update_chain(b)
-    #add_transaction(b)
-    #connect_node(b)
-#b.printChain(i) #out of index오류 -> ??
-    #i += 1
-    #time.sleep(1)
-    return jsonify(mined, chain, is_updated), 200
+b = Blockchain()
+m = Mine(b)
+t = Transaction(b)
 
 
-def mining(m):
+@app.route('/', methods=['GET'])
+def get_chain():
+    response = {
+        'chain': b.chain,
+        'length': len(b.chain)
+    }
+    return response
+
+
+@app.route('/mine', methods=['GET'])
+def mining():
     block = m.mining()
     responses = {
         'message': 'Congrate! you mined a block!',
@@ -34,16 +31,18 @@ def mining(m):
     }
     return responses
 
-def get_chain(b):
+
+@app.route('/transactions', methods=['GET'])
+def return_transactions():
+    transaction_keys = ['sender', 'receiver', 'amount']
     response = {
-        'chain': b.chain,
-        'length': len(b.chain)
+        'message': f'available transactions :  {transaction_keys}'
     }
     return response
 
+
 @app.route('/add_transaction', methods=['GET'])
 def add_transaction():
-    t = Transaction()
     json = request.get_json()
     transaction_keys = ['sender', 'receiver', 'amount']
     if not all(key in json for key in transaction_keys):
@@ -56,11 +55,13 @@ def add_transaction():
     response = {
         'message': f'This transaction will be added to Block {index}'
     }
+
+    print(index)
     return jsonify(response), 201
 
 
 @app.route('/connect_node', methods=['POST'])
-def connect_node(b):
+def connect_node():
     json = request.get_json()
     nodes = json.get('nodes')
     if nodes is None:
@@ -75,7 +76,7 @@ def connect_node(b):
 
 
 @app.route('/update_chain', methods=['GET'])
-def update_chain(b):
+def update_chain():
     is_chain_updated = b.update_chain()
     if is_chain_updated:
         response = {
@@ -87,8 +88,7 @@ def update_chain(b):
             'message': 'All good. The chain is the largest one.',
             'actual_chain': b.chain
         }
-    return response
+    return jsonify(response), 200
 
-app.run(host = '0.0.0.0', port = 5000)
 
-#main()
+app.run(host='0.0.0.0', port=5000)
